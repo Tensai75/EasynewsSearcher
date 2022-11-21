@@ -19,6 +19,6 @@ After installation open the options page and enter your Easynews credentials.
 
 ## How to use it
 
-Rigth click on an NZBLNK and choose "Download with Easynews" to directly download the corresponding NZB file via the Easynews Web Search.
-Be aware, this is very BETA software. There are no error checks or any user interaction.
-Either the NZB file is being saved to your download folder after a few seconds or if an error occured simply nothing will happen...
+Rigth click on an NZBLNK and choose "Download NZB from Easynews" to directly download the corresponding NZB file via the Easynews Web Search.
+A browser notification will show up when the extension starts searching or if an error occured.
+After a few seconds, the download of the NZB file to your computer will start (either with or without a download dialog, depending on your browser settings).

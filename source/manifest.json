@@ -1,6 +1,6 @@
 {
 	"name": "Easynews Searcher",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Browser extension for automatic NZB file download from the Easynews Web Search.",
 	"homepage_url": "https://github.com/Tensai75/EasynewsSearcher",
 	"manifest_version": 3,
@@ -11,7 +11,8 @@
 	"permissions": [
 		"storage",
 		"contextMenus",
-		"downloads"
+		"downloads",
+		"notifications"
 	],
 	"host_permissions": [
 		"https://members.easynews.com/*"

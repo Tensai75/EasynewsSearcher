@@ -540,6 +540,14 @@
     migrations: [ $b80fd2360d77010c$export$2e2bcd8739ae039.migrations.removeUnused ],
     logging: !0
   });
+  function $d4e4c5a4890767ff$var$notification(message) {
+    chrome.notifications.create("EasynewsSearcherNotification_" + Math.floor(1e5 * Math.random()), {
+      type: "basic",
+      iconUrl: "icon.png",
+      title: "Easynews Searcher",
+      message: message
+    });
+  }
   async function $d4e4c5a4890767ff$var$digestMessage(message) {
     const msgUint8 = (new TextEncoder).encode(message), hashBuffer = await crypto.subtle.digest("SHA-1", msgUint8);
     return Array.from(new Uint8Array(hashBuffer)).map((b => b.toString(16).padStart(2, "0"))).join("");
@@ -548,11 +556,11 @@
     const options = await $1d9db287a406f8a6$export$2e2bcd8739ae039.getAll();
     "" !== options.username && "" !== options.password || chrome.runtime.openOptionsPage(), 
     chrome.contextMenus.create({
-      id: "NZBLContextMenu",
-      title: "Download with Easynews",
+      id: "EasynewsSearcherContextMenu",
+      title: "Download NZB from Easynews",
       contexts: [ "link" ]
     }), chrome.contextMenus.onClicked.addListener((function(info, tab) {
-      if (tab && info.hasOwnProperty("linkUrl") && info.linkUrl.startsWith("nzblnk")) {
+      if (info.hasOwnProperty("linkUrl") && info.linkUrl.startsWith("nzblnk")) {
         const results = info.linkUrl.matchAll(/(?:(?:h=(?<header>[^&]*)|t=(?<title>[^&]*)|p=(?<password>[^&]*))(?:&|$))+?/gi);
         let nzblnk = {};
         for (let result of results) nzblnk.title = result.groups.title ? result.groups.title : nzblnk.title, 
@@ -563,55 +571,65 @@
           }, url = `https://members.easynews.com/2.0/search/solr-search/?fly=2&sbj=${header}&pby=1000&pno=1&s1=nsubject&s1d=%2B&s2=nrfile&s2d=%2B&s3=dsize&s3d=%2B&sS=0&st=adv&safeO=0&sb=1`, response = await fetch(url, {
             credentials: "same-origin",
             headers: new Headers(headers)
-          }), data = (await response.json()).data;
-          let results = {};
-          for (let item of data) {
-            const basefilename = item[10].match(/^([^\.]*?)(?:\.|$)/im)[1], hash = await $d4e4c5a4890767ff$var$digestMessage(basefilename + item[7]);
-            results.hasOwnProperty(hash) || (results[hash] = new Array), results[hash].push(item);
-          }
-          Object.keys(results).length >= 1 && async function({title: title, header: header, password: password}, data) {
-            let body = "autoNZB=1";
-            for (const [key, item] of Object.entries(data)) body += `&${key}%26sig%3D${encodeURIComponent(item.sig)}=${encodeURIComponent(item[0])}`;
-            const options = await $1d9db287a406f8a6$export$2e2bcd8739ae039.getAll(), headers = {
-              Authorization: `Basic ${btoa(`${options.username}:${options.password}`)}`,
-              "Content-Type": "application/x-www-form-urlencoded"
-            }, url = "https://members.easynews.com/2.0/api/dl-nzb", response = await fetch(url, {
-              credentials: "same-origin",
-              headers: new Headers(headers),
-              method: "post",
-              body: body
-            });
-            let nzbfile = await response.text();
-            !async function({title: title, header: header, password: password}, nzbfile) {
-              let filename = await async function(title) {
-                const options = await $1d9db287a406f8a6$export$2e2bcd8739ae039.getAll();
-                switch (title = title.replace(/[/\\?%*:|"<>\r\n\t\0\v\f\u200B]/g, ""), options.title) {
-                 case "periods":
-                  title = title.replace(/\s/g, ".");
-                  break;
-
-                 case "spaces":
-                  title = title.replace(/\./g, " ");
-                }
-                return title;
-              }(title);
-              password && "" !== password && (/[\/\\%*:"?~<>*|]/.test(password) || (filename += "{{" + password + "}}"));
-              filename += ".nzb", chrome.downloads.download({
-                url: `data:text/nzb,${nzbfile}`,
-                filename: filename,
-                conflictAction: "uniquify"
+          });
+          if (401 === response.status) $d4e4c5a4890767ff$var$notification("ERROR: Authentication failed. Please check your username and password."); else if (200 === response.status) {
+            let data;
+            try {
+              data = (await response.json()).data;
+            } catch (e) {
+              $d4e4c5a4890767ff$var$notification("ERROR: Cannot read response from Easynews.");
+            }
+            let results = {};
+            for (let item of data) {
+              const basefilename = item[10].match(/^([^\.]*?)(?:\.|$)/im)[1], hash = await $d4e4c5a4890767ff$var$digestMessage(basefilename + item[7]);
+              results.hasOwnProperty(hash) || (results[hash] = new Array), results[hash].push(item);
+            }
+            Object.keys(results).length >= 1 ? async function({title: title, header: header, password: password}, data) {
+              const options = await $1d9db287a406f8a6$export$2e2bcd8739ae039.getAll();
+              let body = "autoNZB=1";
+              for (const [key, item] of Object.entries(data)) body += `&${key}%26sig%3D${encodeURIComponent(item.sig)}=${encodeURIComponent(item[0])}`;
+              const headers = {
+                Authorization: `Basic ${btoa(`${options.username}:${options.password}`)}`,
+                "Content-Type": "application/x-www-form-urlencoded"
+              }, url = "https://members.easynews.com/2.0/api/dl-nzb", response = await fetch(url, {
+                credentials: "same-origin",
+                headers: new Headers(headers),
+                method: "post",
+                body: body
               });
+              if (401 === response.status) $d4e4c5a4890767ff$var$notification("ERROR: Authentication failed. Please check your username and password."); else if (200 === response.status) {
+                !async function({title: title, header: header, password: password}, nzbfile) {
+                  let filename = await async function(title) {
+                    const options = await $1d9db287a406f8a6$export$2e2bcd8739ae039.getAll();
+                    switch (title = title.replace(/[/\\?%*:|"<>\r\n\t\0\v\f\u200B]/g, ""), options.title) {
+                     case "periods":
+                      title = title.replace(/\s/g, ".");
+                      break;
+
+                     case "spaces":
+                      title = title.replace(/\./g, " ");
+                    }
+                    return title;
+                  }(title);
+                  password && "" !== password && (/[\/\\%*:"?~<>*|]/.test(password) || (filename += "{{" + password + "}}"));
+                  filename += ".nzb", chrome.downloads.download({
+                    url: `data:text/nzb,${nzbfile}`,
+                    filename: filename,
+                    conflictAction: "uniquify"
+                  });
+                }({
+                  title: title,
+                  header: header,
+                  password: password
+                }, await response.text());
+              } else $d4e4c5a4890767ff$var$notification("ERROR: Unknown error while connecting to easynews to download the NZB file");
             }({
               title: title,
               header: header,
               password: password
-            }, nzbfile);
-          }({
-            title: title,
-            header: header,
-            password: password
-          }, results[Object.keys(results)[0]]);
-        }(nzblnk);
+            }, results[Object.keys(results)[0]]) : $d4e4c5a4890767ff$var$notification("ERROR: Easynews returned no results.");
+          } else $d4e4c5a4890767ff$var$notification("ERROR: Unknown error while connectiong to easynews to search for the header.");
+        }(nzblnk), $d4e4c5a4890767ff$var$notification(`Search for header "${nzblnk.header}" started.`);
       }
     }));
   }();
